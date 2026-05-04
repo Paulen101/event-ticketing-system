@@ -1,0 +1,28 @@
+{
+  "name": "event-ticketing-system-api",
+  "version": "1.0.0",
+  "description": "REST API for managing events, ticket bookings, users, authentication, and admin-only event management.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "mongoose",
+    "jwt",
+    "ticketing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "nodemailer": "^8.0.7",
+    "qrcode": "^1.5.4"
+  }
+}
