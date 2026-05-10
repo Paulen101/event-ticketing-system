@@ -3,7 +3,7 @@ const generateToken = require('../utils/generateToken');
 
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       res.status(400);
@@ -20,8 +20,7 @@ const registerUser = async (req, res, next) => {
     const user = await User.create({
       name,
       email,
-      password,
-      role: role === 'admin' ? 'admin' : 'user'
+      password
     });
 
     res.status(201).json({

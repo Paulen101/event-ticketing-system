@@ -39,40 +39,54 @@ const getBookingById = async (req, res, next) => {
 const createBooking = async (req, res, next) => {
   try {
     const { event: eventId, quantity } = req.body;
+    const requestedQuantity = Number(quantity);
 
     if (!eventId || !quantity) {
       res.status(400);
       throw new Error('Event and quantity are required');
     }
 
-    if (Number(quantity) <= 0) {
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity <= 0) {
       res.status(400);
-      throw new Error('Quantity must be greater than 0');
+      throw new Error('Quantity must be a whole number greater than 0');
     }
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        $expr: {
+          $gte: [{ $subtract: ['$seatCapacity', '$bookedSeats'] }, requestedQuantity]
+        }
+      },
+      { $inc: { bookedSeats: requestedQuantity } },
+      { new: true, runValidators: true }
+    );
 
     if (!event) {
-      res.status(404);
-      throw new Error('Event not found');
-    }
+      const eventExists = await Event.exists({ _id: eventId });
 
-    const availableSeats = event.seatCapacity - event.bookedSeats;
+      if (!eventExists) {
+        res.status(404);
+        throw new Error('Event not found');
+      }
 
-    if (Number(quantity) > availableSeats) {
       res.status(400);
       throw new Error('Not enough seats available');
     }
 
-    event.bookedSeats += Number(quantity);
-    await event.save();
+    let createdBooking;
 
-    const createdBooking = await Booking.create({
-      user: req.user._id,
-      event: event._id,
-      quantity: Number(quantity),
-      qrCode: crypto.randomUUID()
-    });
+    try {
+      createdBooking = await Booking.create({
+        user: req.user._id,
+        event: event._id,
+        quantity: requestedQuantity,
+        qrCode: crypto.randomUUID()
+      });
+    } catch (bookingError) {
+      await Event.updateOne({ _id: event._id }, { $inc: { bookedSeats: -requestedQuantity } });
+      throw bookingError;
+    }
 
     const booking = await Booking.findById(createdBooking._id).populate('event');
     const qrImage = await QRCode.toDataURL(booking.qrCode);
