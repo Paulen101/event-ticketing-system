@@ -39,40 +39,47 @@ const getBookingById = async (req, res, next) => {
 const createBooking = async (req, res, next) => {
   try {
     const { event: eventId, quantity } = req.body;
+    const ticketQuantity = Number(quantity);
 
     if (!eventId || !quantity) {
       res.status(400);
       throw new Error('Event and quantity are required');
     }
 
-    if (Number(quantity) <= 0) {
+    if (!Number.isInteger(ticketQuantity) || ticketQuantity <= 0) {
       res.status(400);
-      throw new Error('Quantity must be greater than 0');
+      throw new Error('Quantity must be a whole number greater than 0');
     }
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        $expr: {
+          $lte: [{ $add: ['$bookedSeats', ticketQuantity] }, '$seatCapacity']
+        }
+      },
+      { $inc: { bookedSeats: ticketQuantity } },
+      { new: true, runValidators: true }
+    );
 
     if (!event) {
-      res.status(404);
-      throw new Error('Event not found');
-    }
-
-    const availableSeats = event.seatCapacity - event.bookedSeats;
-
-    if (Number(quantity) > availableSeats) {
       res.status(400);
-      throw new Error('Not enough seats available');
+      throw new Error('Event not found or not enough seats available');
     }
 
-    event.bookedSeats += Number(quantity);
-    await event.save();
+    let createdBooking;
 
-    const createdBooking = await Booking.create({
-      user: req.user._id,
-      event: event._id,
-      quantity: Number(quantity),
-      qrCode: crypto.randomUUID()
-    });
+    try {
+      createdBooking = await Booking.create({
+        user: req.user._id,
+        event: event._id,
+        quantity: ticketQuantity,
+        qrCode: crypto.randomUUID()
+      });
+    } catch (bookingError) {
+      await Event.findByIdAndUpdate(event._id, { $inc: { bookedSeats: -ticketQuantity } });
+      throw bookingError;
+    }
 
     const booking = await Booking.findById(createdBooking._id).populate('event');
     const qrImage = await QRCode.toDataURL(booking.qrCode);
@@ -100,9 +107,7 @@ const createBooking = async (req, res, next) => {
 
 const validateBookingQr = async (req, res, next) => {
   try {
-    const booking = await Booking.findOne({ qrCode: req.params.qr })
-      .populate('event')
-      .populate('user', 'name email');
+    const booking = await Booking.findOne({ qrCode: req.params.qr }).populate('event');
 
     if (!booking) {
       res.status(404);
@@ -111,7 +116,12 @@ const validateBookingQr = async (req, res, next) => {
 
     res.json({
       valid: true,
-      booking
+      booking: {
+        _id: booking._id,
+        event: booking.event,
+        quantity: booking.quantity,
+        bookingDate: booking.bookingDate
+      }
     });
   } catch (error) {
     next(error);
