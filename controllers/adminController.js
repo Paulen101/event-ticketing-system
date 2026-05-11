@@ -2,6 +2,38 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
 
+const getEventsWithBookings = async () => {
+  const events = await Event.find().sort({ date: 1 }).lean();
+  const eventIds = events.map((event) => event._id);
+  const bookings = await Booking.find({ event: { $in: eventIds } })
+    .populate('user', 'name email')
+    .sort({ bookingDate: -1 })
+    .lean();
+
+  const bookingsByEvent = bookings.reduce((acc, booking) => {
+    const eventId = booking.event.toString();
+
+    if (!acc[eventId]) {
+      acc[eventId] = [];
+    }
+
+    acc[eventId].push({
+      bookingId: booking._id,
+      quantity: booking.quantity,
+      bookingDate: booking.bookingDate,
+      qrCode: booking.qrCode,
+      user: booking.user
+    });
+
+    return acc;
+  }, {});
+
+  return events.map((event) => ({
+    ...event,
+    bookings: bookingsByEvent[event._id.toString()] || []
+  }));
+};
+
 const getDashboard = async (req, res, next) => {
   try {
     const [
@@ -10,7 +42,8 @@ const getDashboard = async (req, res, next) => {
       totalBookings,
       recentEvents,
       recentBookings,
-      lowAvailabilityEvents
+      lowAvailabilityEvents,
+      eventsWithBookings
     ] = await Promise.all([
       User.countDocuments(),
       Event.countDocuments(),
@@ -53,7 +86,8 @@ const getDashboard = async (req, res, next) => {
             availableSeats: 1
           }
         }
-      ])
+      ]),
+      getEventsWithBookings()
     ]);
 
     res.json({
@@ -64,8 +98,19 @@ const getDashboard = async (req, res, next) => {
       },
       recentEvents,
       recentBookings,
-      lowAvailabilityEvents
+      lowAvailabilityEvents,
+      eventsWithBookings
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDashboardEvents = async (req, res, next) => {
+  try {
+    const eventsWithBookings = await getEventsWithBookings();
+
+    res.json(eventsWithBookings);
   } catch (error) {
     next(error);
   }
@@ -171,5 +216,6 @@ const getAnalytics = async (req, res, next) => {
 
 module.exports = {
   getDashboard,
+  getDashboardEvents,
   getAnalytics
 };

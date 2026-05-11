@@ -76,12 +76,16 @@ const createBooking = async (req, res, next) => {
 
     let createdBooking;
 
+    const qrCode = crypto.randomUUID();
+    const qrImage = await QRCode.toDataURL(qrCode);
+
     try {
       createdBooking = await Booking.create({
         user: req.user._id,
         event: event._id,
         quantity: requestedQuantity,
-        qrCode: crypto.randomUUID()
+        qrCode,
+        qrImage
       });
     } catch (bookingError) {
       await Event.updateOne({ _id: event._id }, { $inc: { bookedSeats: -requestedQuantity } });
@@ -89,7 +93,6 @@ const createBooking = async (req, res, next) => {
     }
 
     const booking = await Booking.findById(createdBooking._id).populate('event');
-    const qrImage = await QRCode.toDataURL(booking.qrCode);
     let emailSent = false;
 
     try {
