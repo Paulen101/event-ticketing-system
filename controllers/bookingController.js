@@ -71,7 +71,7 @@ const createBooking = async (req, res, next) => {
       }
 
       res.status(400);
-      throw new Error('Event not found or not enough seats available');
+      throw new Error('Not enough seats available');
     }
 
     let createdBooking;
@@ -117,7 +117,9 @@ const createBooking = async (req, res, next) => {
 
 const validateBookingQr = async (req, res, next) => {
   try {
-    const booking = await Booking.findOne({ qrCode: req.params.qr }).populate('event');
+    const booking = await Booking.findOne({ qrCode: req.params.qr })
+      .populate('event')
+      .populate('user', 'name email');
 
     if (!booking) {
       res.status(404);
@@ -126,12 +128,7 @@ const validateBookingQr = async (req, res, next) => {
 
     res.json({
       valid: true,
-      booking: {
-        _id: booking._id,
-        event: booking.event,
-        quantity: booking.quantity,
-        bookingDate: booking.bookingDate
-      }
+      booking
     });
   } catch (error) {
     next(error);
