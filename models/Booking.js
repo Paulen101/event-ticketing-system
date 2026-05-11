@@ -25,6 +25,10 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true
+    },
+    qrImage: {
+      type: String,
+      default: ''
     }
   },
   {

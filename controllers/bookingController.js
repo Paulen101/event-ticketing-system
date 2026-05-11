@@ -39,14 +39,14 @@ const getBookingById = async (req, res, next) => {
 const createBooking = async (req, res, next) => {
   try {
     const { event: eventId, quantity } = req.body;
-    const ticketQuantity = Number(quantity);
+    const requestedQuantity = Number(quantity);
 
     if (!eventId || !quantity) {
       res.status(400);
       throw new Error('Event and quantity are required');
     }
 
-    if (!Number.isInteger(ticketQuantity) || ticketQuantity <= 0) {
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity <= 0) {
       res.status(400);
       throw new Error('Quantity must be a whole number greater than 0');
     }
@@ -55,34 +55,44 @@ const createBooking = async (req, res, next) => {
       {
         _id: eventId,
         $expr: {
-          $lte: [{ $add: ['$bookedSeats', ticketQuantity] }, '$seatCapacity']
+          $gte: [{ $subtract: ['$seatCapacity', '$bookedSeats'] }, requestedQuantity]
         }
       },
-      { $inc: { bookedSeats: ticketQuantity } },
+      { $inc: { bookedSeats: requestedQuantity } },
       { new: true, runValidators: true }
     );
 
     if (!event) {
+      const eventExists = await Event.exists({ _id: eventId });
+
+      if (!eventExists) {
+        res.status(404);
+        throw new Error('Event not found');
+      }
+
       res.status(400);
       throw new Error('Event not found or not enough seats available');
     }
 
     let createdBooking;
 
+    const qrCode = crypto.randomUUID();
+    const qrImage = await QRCode.toDataURL(qrCode);
+
     try {
       createdBooking = await Booking.create({
         user: req.user._id,
         event: event._id,
-        quantity: ticketQuantity,
-        qrCode: crypto.randomUUID()
+        quantity: requestedQuantity,
+        qrCode,
+        qrImage
       });
     } catch (bookingError) {
-      await Event.findByIdAndUpdate(event._id, { $inc: { bookedSeats: -ticketQuantity } });
+      await Event.updateOne({ _id: event._id }, { $inc: { bookedSeats: -requestedQuantity } });
       throw bookingError;
     }
 
     const booking = await Booking.findById(createdBooking._id).populate('event');
-    const qrImage = await QRCode.toDataURL(booking.qrCode);
     let emailSent = false;
 
     try {
