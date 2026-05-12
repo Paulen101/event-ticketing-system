@@ -119,7 +119,7 @@ const validateBookingQr = async (req, res, next) => {
   try {
     const booking = await Booking.findOne({ qrCode: req.params.qr })
       .populate('event')
-      .populate('user', 'name email');
+      .populate('user', 'name');
 
     if (!booking) {
       res.status(404);
@@ -128,7 +128,13 @@ const validateBookingQr = async (req, res, next) => {
 
     res.json({
       valid: true,
-      booking
+      booking: {
+        _id: booking._id,
+        event: booking.event,
+        quantity: booking.quantity,
+        bookingDate: booking.bookingDate,
+        user: booking.user
+      }
     });
   } catch (error) {
     next(error);

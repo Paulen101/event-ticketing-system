@@ -3,16 +3,11 @@ const generateToken = require('../utils/generateToken');
 
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       res.status(400);
       throw new Error('Name, email, and password are required');
-    }
-
-    if (!['user', 'admin'].includes(role)) {
-      res.status(400);
-      throw new Error('Role must be either user or admin');
     }
 
     const existingUser = await User.findOne({ email });
@@ -26,7 +21,7 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password,
-      role
+      role: 'user'
     });
 
     res.status(201).json({

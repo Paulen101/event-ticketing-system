@@ -1,16 +1,24 @@
+const readSavedUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('ticketUser') || 'null');
+  } catch (error) {
+    localStorage.removeItem('ticketUser');
+    return null;
+  }
+};
+
 const state = {
   authMode: 'login',
-  user: JSON.parse(localStorage.getItem('ticketUser') || 'null')
+  user: readSavedUser()
 };
 
 const elements = {
   sessionLabel: document.getElementById('sessionLabel'),
   logoutButton: document.getElementById('logoutButton'),
+  authPanel: document.getElementById('authPanel'),
   authForm: document.getElementById('authForm'),
   nameField: document.getElementById('nameField'),
   nameInput: document.getElementById('nameInput'),
-  roleField: document.getElementById('roleField'),
-  roleInput: document.getElementById('roleInput'),
   emailInput: document.getElementById('emailInput'),
   passwordInput: document.getElementById('passwordInput'),
   eventsList: document.getElementById('eventsList'),
@@ -18,6 +26,11 @@ const elements = {
   bookingsPanel: document.getElementById('bookingsPanel'),
   bookingsList: document.getElementById('bookingsList'),
   adminPanel: document.getElementById('adminPanel'),
+  analyticsSummary: document.getElementById('analyticsSummary'),
+  capacityRate: document.getElementById('capacityRate'),
+  capacityBar: document.getElementById('capacityBar'),
+  capacityDetails: document.getElementById('capacityDetails'),
+  categoryStats: document.getElementById('categoryStats'),
   adminEventsList: document.getElementById('adminEventsList'),
   toast: document.getElementById('toast')
 };
@@ -53,6 +66,14 @@ const showToast = (message) => {
   showToast.timeout = window.setTimeout(() => elements.toast.classList.add('hidden'), 3500);
 };
 
+const runAction = async (action) => {
+  try {
+    await action();
+  } catch (error) {
+    showToast(error.message);
+  }
+};
+
 const escapeHtml = (value) =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -66,19 +87,39 @@ const formatDate = (value, time) => {
   return time ? `${date} at ${time}` : date;
 };
 
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+
+const formatNumber = (value) => new Intl.NumberFormat('en-US').format(Number(value || 0));
+
+const percent = (value, total) => {
+  if (!total) return 0;
+  return Math.min(Math.round((Number(value || 0) / Number(total || 0)) * 100), 100);
+};
+
 const availableSeats = (event) => Math.max((event.seatCapacity || 0) - (event.bookedSeats || 0), 0);
 
 const renderSession = () => {
   if (!state.user) {
     elements.sessionLabel.textContent = 'Signed out';
     elements.logoutButton.classList.add('hidden');
+    elements.authPanel.classList.remove('hidden');
     elements.bookingsPanel.classList.add('hidden');
     elements.adminPanel.classList.add('hidden');
+    elements.bookingsList.innerHTML = '';
+    elements.adminEventsList.innerHTML = '';
+    elements.analyticsSummary.innerHTML = '';
+    elements.categoryStats.innerHTML = '';
     return;
   }
 
   elements.sessionLabel.textContent = `${state.user.name} (${state.user.role})`;
   elements.logoutButton.classList.remove('hidden');
+  elements.authPanel.classList.add('hidden');
   elements.bookingsPanel.classList.remove('hidden');
   elements.adminPanel.classList.toggle('hidden', state.user.role !== 'admin');
 };
@@ -124,6 +165,57 @@ const renderBookings = (bookings) => {
         `
       )
       .join('') || '<p class="muted">No bookings yet.</p>';
+};
+
+const renderAnalytics = (analytics) => {
+  const occupancyRate = percent(analytics.totalBookedSeats, analytics.totalSeatCapacity);
+  const revenueRate = percent(analytics.totalRevenue, analytics.totalPotentialRevenue);
+  const categories = analytics.categoryStats || [];
+
+  const metrics = [
+    ['Revenue', formatCurrency(analytics.totalRevenue), `${revenueRate}% of potential`],
+    ['Tickets sold', formatNumber(analytics.totalTicketsBooked), `${formatNumber(analytics.totalBookings)} bookings`],
+    ['Events', formatNumber(analytics.totalEvents), `${formatNumber(analytics.totalUsers)} users`],
+    ['Seats left', formatNumber(analytics.totalAvailableSeats), `${occupancyRate}% occupied`]
+  ];
+
+  elements.analyticsSummary.innerHTML = metrics
+    .map(
+      ([label, value, note]) => `
+        <article class="metric-card">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(note)}</small>
+        </article>
+      `
+    )
+    .join('');
+
+  elements.capacityRate.textContent = `${occupancyRate}% occupied`;
+  elements.capacityBar.style.width = `${occupancyRate}%`;
+  elements.capacityDetails.innerHTML = `
+    <span>${formatNumber(analytics.totalBookedSeats)} booked</span>
+    <span>${formatNumber(analytics.totalSeatCapacity)} total seats</span>
+  `;
+
+  elements.categoryStats.innerHTML =
+    categories
+      .map((category) => {
+        const categoryRate = percent(category.bookedSeats, category.seatCapacity);
+
+        return `
+          <div class="category-row">
+            <div>
+              <strong>${escapeHtml(category.category || 'Uncategorized')}</strong>
+              <span>${formatNumber(category.events)} event${category.events === 1 ? '' : 's'} &middot; ${formatNumber(category.bookedSeats)} booked</span>
+            </div>
+            <div class="category-meter" aria-label="${categoryRate}% occupied">
+              <span style="width: ${categoryRate}%"></span>
+            </div>
+          </div>
+        `;
+      })
+      .join('') || '<p class="muted">No category data yet.</p>';
 };
 
 const renderAdminEvents = (events) => {
@@ -179,11 +271,18 @@ const loadAdminEvents = async () => {
   renderAdminEvents(events);
 };
 
+const loadAnalytics = async () => {
+  if (state.user?.role !== 'admin') return;
+  const analytics = await request('/api/admin/analytics');
+  renderAnalytics(analytics);
+};
+
 const refresh = async () => {
   try {
     renderSession();
     await loadEvents();
     await loadBookings();
+    await loadAnalytics();
     await loadAdminEvents();
   } catch (error) {
     showToast(error.message);
@@ -196,7 +295,6 @@ document.querySelectorAll('[data-auth-mode]').forEach((button) => {
     document.querySelectorAll('[data-auth-mode]').forEach((tab) => tab.classList.remove('active'));
     button.classList.add('active');
     elements.nameField.classList.toggle('hidden', state.authMode !== 'register');
-    elements.roleField.classList.toggle('hidden', state.authMode !== 'register');
     elements.nameInput.required = state.authMode === 'register';
   });
 });
@@ -211,7 +309,6 @@ elements.authForm.addEventListener('submit', async (event) => {
 
   if (state.authMode === 'register') {
     payload.name = elements.nameInput.value;
-    payload.role = elements.roleInput.value;
   }
 
   try {
@@ -262,7 +359,12 @@ elements.logoutButton.addEventListener('click', () => {
 });
 
 document.getElementById('refreshEvents').addEventListener('click', refresh);
-document.getElementById('refreshBookings').addEventListener('click', loadBookings);
-document.getElementById('refreshAdmin').addEventListener('click', loadAdminEvents);
+document.getElementById('refreshBookings').addEventListener('click', () => runAction(loadBookings));
+document.getElementById('refreshAdmin').addEventListener('click', () =>
+  runAction(async () => {
+    await loadAnalytics();
+    await loadAdminEvents();
+  })
+);
 
 refresh();

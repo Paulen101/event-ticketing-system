@@ -78,7 +78,7 @@ Filters:
 | GET | `/api/bookings` | Authenticated | Get logged-in user's bookings |
 | GET | `/api/bookings/:id` | Authenticated | Get own booking by ID |
 | POST | `/api/bookings` | Authenticated | Book tickets |
-| GET | `/api/bookings/validate/:qr` | Public | Validate a booking QR code |
+| GET | `/api/bookings/validate/:qr` | Admin | Validate a booking QR code |
 
 Booking creation returns the booking, a `qrImage` data URL, and `emailSent`.
 
@@ -113,7 +113,7 @@ Register:
 }
 ```
 
-Use `"role": "admin"` to create an admin account. If `role` is omitted, the API registers a regular user.
+Public registration always creates a regular user. Create admin accounts by updating trusted users directly in the database or through a separate protected admin workflow.
 
 Create event:
 
