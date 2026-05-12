@@ -10,6 +10,7 @@ A Node.js and Express REST API for managing events, ticket bookings, users, auth
 - Users can view only their own bookings
 - Admin-only event creation, updates, and deletion
 - Admin dashboard and analytics endpoints
+- Browser frontend for login, event booking, user bookings, and admin event bookings
 - Centralized error handling and content-aware 404 responses
 
 ## Setup
@@ -41,7 +42,7 @@ EMAIL_FROM=
 npm start
 ```
 
-The API runs at `http://localhost:5000`.
+The app runs at `http://localhost:5000`. The browser frontend is served from `/`, the admin dashboard frontend is available at `/admin/dashboard`, and the API is served from `/api`.
 
 ## Endpoints
 
@@ -86,11 +87,12 @@ Booking creation returns the booking, a `qrImage` data URL, and `emailSent`.
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/api/admin/dashboard` | Admin | Get admin dashboard summary, recent activity, and low-seat events |
+| GET | `/api/admin/dashboard/events` | Admin | Get all events with bookings and users who booked each event |
 | GET | `/api/admin/analytics` | Admin | Get booking, seat, revenue, and category analytics |
 
 ## Optional Email Confirmation
 
-Email confirmation is skipped unless all SMTP variables are set in `.env`.
+Booking creation sends a confirmation email through Nodemailer when all SMTP variables are set in `.env`. If SMTP is not configured, booking still succeeds and the API returns `emailSent: false`.
 
 ## Auth Header
 
@@ -106,9 +108,12 @@ Register:
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "role": "user"
 }
 ```
+
+Use `"role": "admin"` to create an admin account. If `role` is omitted, the API registers a regular user.
 
 Create event:
 

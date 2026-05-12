@@ -10,14 +10,17 @@ const getEventsWithBookings = async () => {
     .sort({ bookingDate: -1 })
     .lean();
 
-  const bookingsByEvent = bookings.reduce((acc, booking) => {
+  const groupedByEvent = bookings.reduce((acc, booking) => {
     const eventId = booking.event.toString();
 
     if (!acc[eventId]) {
-      acc[eventId] = [];
+      acc[eventId] = {
+        bookings: [],
+        bookedUsersById: {}
+      };
     }
 
-    acc[eventId].push({
+    acc[eventId].bookings.push({
       bookingId: booking._id,
       quantity: booking.quantity,
       bookingDate: booking.bookingDate,
@@ -25,13 +28,33 @@ const getEventsWithBookings = async () => {
       user: booking.user
     });
 
+    if (booking.user) {
+      const userId = booking.user._id.toString();
+
+      if (!acc[eventId].bookedUsersById[userId]) {
+        acc[eventId].bookedUsersById[userId] = {
+          ...booking.user,
+          totalTickets: 0,
+          bookingCount: 0
+        };
+      }
+
+      acc[eventId].bookedUsersById[userId].totalTickets += booking.quantity;
+      acc[eventId].bookedUsersById[userId].bookingCount += 1;
+    }
+
     return acc;
   }, {});
 
-  return events.map((event) => ({
-    ...event,
-    bookings: bookingsByEvent[event._id.toString()] || []
-  }));
+  return events.map((event) => {
+    const grouped = groupedByEvent[event._id.toString()];
+
+    return {
+      ...event,
+      bookings: grouped?.bookings || [],
+      bookedUsers: grouped ? Object.values(grouped.bookedUsersById) : []
+    };
+  });
 };
 
 const getDashboard = async (req, res, next) => {

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Ticketing</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ticket Management</p>
+        <h1>Events and bookings</h1>
+      </div>
+      <div class="session">
+        <span id="sessionLabel">Signed out</span>
+        <button id="logoutButton" class="icon-button hidden" title="Sign out" type="button">&#8618;</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel auth-panel" aria-labelledby="authTitle">
+        <div class="section-heading">
+          <h2 id="authTitle">Account</h2>
+          <div class="tabs" role="tablist" aria-label="Authentication mode">
+            <button class="tab active" data-auth-mode="login" type="button">Login</button>
+            <button class="tab" data-auth-mode="register" type="button">Register</button>
+          </div>
+        </div>
+
+        <form id="authForm" class="form">
+          <label id="nameField" class="hidden">
+            Name
+            <input id="nameInput" autocomplete="name" />
+          </label>
+          <label id="roleField" class="hidden">
+            Role
+            <select id="roleInput">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <label>
+            Email
+            <input id="emailInput" autocomplete="email" type="email" required />
+          </label>
+          <label>
+            Password
+            <input id="passwordInput" autocomplete="current-password" type="password" required minlength="6" />
+          </label>
+          <button class="primary" type="submit">Continue</button>
+        </form>
+      </section>
+
+      <section class="panel events-panel" aria-labelledby="eventsTitle">
+        <div class="section-heading">
+          <div>
+            <h2 id="eventsTitle">Available events</h2>
+            <p id="eventCount" class="muted">Loading events...</p>
+          </div>
+          <button id="refreshEvents" class="icon-button" title="Refresh events" type="button">&#8635;</button>
+        </div>
+        <div id="eventsList" class="event-grid"></div>
+      </section>
+
+      <section id="bookingsPanel" class="panel hidden" aria-labelledby="bookingsTitle">
+        <div class="section-heading">
+          <h2 id="bookingsTitle">My bookings</h2>
+          <button id="refreshBookings" class="icon-button" title="Refresh bookings" type="button">&#8635;</button>
+        </div>
+        <div id="bookingsList" class="list"></div>
+      </section>
+
+      <section id="adminPanel" class="panel admin-panel hidden" aria-labelledby="adminTitle">
+        <div class="section-heading">
+          <div>
+            <h2 id="adminTitle">Admin dashboard</h2>
+            <p class="muted">Events with users who booked tickets</p>
+          </div>
+          <button id="refreshAdmin" class="icon-button" title="Refresh dashboard" type="button">&#8635;</button>
+        </div>
+        <div id="adminEventsList" class="admin-list"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
