@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const dns = require('dns');
 const express = require('express');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -13,6 +14,8 @@ const { getEmailConfigStatus } = require('./utils/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+dns.setDefaultResultOrder('ipv4first');
 
 connectDB();
 
