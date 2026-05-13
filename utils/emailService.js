@@ -1,4 +1,7 @@
+const dns = require('dns');
 const nodemailer = require('nodemailer');
+
+const dnsPromises = dns.promises;
 
 const getEmailConfig = () => {
   const port = Number(process.env.SMTP_PORT || 587);
@@ -62,8 +65,39 @@ const getQrAttachment = (booking) => {
   };
 };
 
-const sendBookingConfirmation = async ({ to, booking, event }) => {
+const createEmailTransporter = async () => {
   const emailConfig = getEmailConfig();
+  let smtpHost = emailConfig.host;
+
+  try {
+    const addresses = await dnsPromises.resolve4(emailConfig.host);
+
+    if (addresses.length > 0) {
+      smtpHost = addresses[0];
+    }
+  } catch (error) {
+    console.warn(`Could not resolve IPv4 SMTP host ${emailConfig.host}: ${error.message}`);
+  }
+
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: emailConfig.port,
+    secure: emailConfig.secure,
+    servername: emailConfig.host,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    tls: {
+      servername: emailConfig.host
+    },
+    auth: {
+      user: emailConfig.user,
+      pass: emailConfig.pass
+    }
+  });
+};
+
+const sendBookingConfirmation = async ({ to, booking, event }) => {
   const emailConfigStatus = getEmailConfigStatus();
 
   if (!emailConfigStatus.configured || !to) {
@@ -71,22 +105,10 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
   }
 
   const qrAttachment = getQrAttachment(booking);
-
-  const transporter = nodemailer.createTransport({
-    host: emailConfig.host,
-    port: emailConfig.port,
-    secure: emailConfig.secure,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    auth: {
-      user: emailConfig.user,
-      pass: emailConfig.pass
-    }
-  });
+  const transporter = await createEmailTransporter();
 
   await transporter.sendMail({
-    from: emailConfig.from,
+    from: getEmailConfig().from,
     to,
     subject: `Booking confirmed: ${event.title}`,
     text: [
@@ -128,7 +150,6 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
 };
 
 const verifyEmailConnection = async () => {
-  const emailConfig = getEmailConfig();
   const emailConfigStatus = getEmailConfigStatus();
 
   if (!emailConfigStatus.configured) {
@@ -139,18 +160,7 @@ const verifyEmailConnection = async () => {
     };
   }
 
-  const transporter = nodemailer.createTransport({
-    host: emailConfig.host,
-    port: emailConfig.port,
-    secure: emailConfig.secure,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    auth: {
-      user: emailConfig.user,
-      pass: emailConfig.pass
-    }
-  });
+  const transporter = await createEmailTransporter();
 
   try {
     await transporter.verify();

@@ -108,7 +108,7 @@ EMAIL_FROM=your_email@gmail.com
 
 `EMAIL_FROM` can be omitted when it is the same as `SMTP_USER`. Use `SMTP_SECURE=true` for port `465`; for port `587`, keep `SMTP_SECURE=false`.
 
-If deployed email logs show `connect ENETUNREACH` with an IPv6 address, the host cannot route IPv6 SMTP traffic. The server sets Node DNS resolution to prefer IPv4 for outbound connections.
+If deployed email logs show `connect ENETUNREACH` with an IPv6 address, the host cannot route IPv6 SMTP traffic. The server sets Node DNS resolution to prefer IPv4, and the mailer resolves `SMTP_HOST` to an IPv4 address before connecting.
 
 ## Auth Header
 
