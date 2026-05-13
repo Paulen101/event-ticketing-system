@@ -127,7 +127,52 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
   return true;
 };
 
+const verifyEmailConnection = async () => {
+  const emailConfig = getEmailConfig();
+  const emailConfigStatus = getEmailConfigStatus();
+
+  if (!emailConfigStatus.configured) {
+    return {
+      ok: false,
+      missing: emailConfigStatus.missing,
+      error: 'SMTP is not fully configured'
+    };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: emailConfig.host,
+    port: emailConfig.port,
+    secure: emailConfig.secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    auth: {
+      user: emailConfig.user,
+      pass: emailConfig.pass
+    }
+  });
+
+  try {
+    await transporter.verify();
+
+    return {
+      ok: true,
+      missing: []
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      missing: [],
+      error: error.message,
+      code: error.code,
+      command: error.command,
+      responseCode: error.responseCode
+    };
+  }
+};
+
 module.exports = {
   getEmailConfigStatus,
-  sendBookingConfirmation
+  sendBookingConfirmation,
+  verifyEmailConnection
 };

@@ -89,6 +89,7 @@ Booking creation returns the booking, a `qrImage` data URL, `emailSent`, and `em
 | GET | `/api/admin/dashboard` | Admin | Get admin dashboard summary, recent activity, and low-seat events |
 | GET | `/api/admin/dashboard/events` | Admin | Get all events with bookings and users who booked each event |
 | GET | `/api/admin/analytics` | Admin | Get booking, seat, revenue, and category analytics |
+| GET | `/api/admin/email-status` | Admin | Verify deployed SMTP configuration without exposing secrets |
 
 ## Optional Email Confirmation
 

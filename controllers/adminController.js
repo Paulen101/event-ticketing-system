@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const { getEmailConfigStatus, verifyEmailConnection } = require('../utils/emailService');
 
 const getEventsWithBookings = async () => {
   const events = await Event.find().sort({ date: 1 }).lean();
@@ -237,8 +238,28 @@ const getAnalytics = async (req, res, next) => {
   }
 };
 
+const getEmailStatus = async (req, res, next) => {
+  try {
+    const configStatus = getEmailConfigStatus();
+    const connectionStatus = await verifyEmailConnection();
+
+    res.json({
+      configured: configStatus.configured,
+      missing: configStatus.missing,
+      smtpVerified: connectionStatus.ok,
+      error: connectionStatus.error,
+      code: connectionStatus.code,
+      command: connectionStatus.command,
+      responseCode: connectionStatus.responseCode
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboard,
   getDashboardEvents,
-  getAnalytics
+  getAnalytics,
+  getEmailStatus
 };

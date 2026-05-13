@@ -111,7 +111,9 @@ const createBooking = async (req, res, next) => {
             event
           });
         } catch (emailError) {
-          console.error(`Booking confirmation email failed: ${emailError.message}`);
+          console.error(
+            `Booking confirmation email failed for booking ${booking._id} to ${req.user.email}: ${emailError.message}`
+          );
         }
       });
     }
