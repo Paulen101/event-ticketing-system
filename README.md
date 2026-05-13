@@ -10,6 +10,7 @@ A Node.js and Express REST API for managing events, ticket bookings, users, auth
 - Users can view only their own bookings
 - Admin-only event creation, updates, and deletion
 - Admin dashboard and analytics endpoints
+- Browser frontend for login, event booking, user bookings, and admin event bookings
 - Centralized error handling and content-aware 404 responses
 
 ## Setup
@@ -41,7 +42,7 @@ EMAIL_FROM=
 npm start
 ```
 
-The API runs at `http://localhost:5000`.
+The app runs at `http://localhost:5000`. The browser frontend is served from `/`, the admin dashboard frontend is available at `/admin/dashboard`, and the API is served from `/api`.
 
 ## Endpoints
 
@@ -77,7 +78,7 @@ Filters:
 | GET | `/api/bookings` | Authenticated | Get logged-in user's bookings |
 | GET | `/api/bookings/:id` | Authenticated | Get own booking by ID |
 | POST | `/api/bookings` | Authenticated | Book tickets |
-| GET | `/api/bookings/validate/:qr` | Public | Validate a booking QR code |
+| GET | `/api/bookings/validate/:qr` | Admin | Validate a booking QR code |
 
 Booking creation returns the booking, a `qrImage` data URL, and `emailSent`.
 
@@ -86,11 +87,12 @@ Booking creation returns the booking, a `qrImage` data URL, and `emailSent`.
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/api/admin/dashboard` | Admin | Get admin dashboard summary, recent activity, and low-seat events |
+| GET | `/api/admin/dashboard/events` | Admin | Get all events with bookings and users who booked each event |
 | GET | `/api/admin/analytics` | Admin | Get booking, seat, revenue, and category analytics |
 
 ## Optional Email Confirmation
 
-Email confirmation is skipped unless all SMTP variables are set in `.env`.
+Booking creation sends a confirmation email through Nodemailer when all SMTP variables are set in `.env`. If SMTP is not configured, booking still succeeds and the API returns `emailSent: false`.
 
 ## Auth Header
 
@@ -106,9 +108,12 @@ Register:
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "role": "user"
 }
 ```
+
+Public registration always creates a regular user. Create admin accounts by updating trusted users directly in the database or through a separate protected admin workflow.
 
 Create event:
 

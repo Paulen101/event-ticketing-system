@@ -20,7 +20,8 @@ const registerUser = async (req, res, next) => {
     const user = await User.create({
       name,
       email,
-      password
+      password,
+      role: 'user'
     });
 
     res.status(201).json({

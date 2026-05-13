@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Event Ticketing</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ticket Operations</p>
+        <h1>Event ticketing console</h1>
+      </div>
+      <div class="session">
+        <span id="sessionLabel">Signed out</span>
+        <button id="logoutButton" class="secondary hidden" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Account and bookings">
+        <section id="authPanel" class="panel auth-panel" aria-labelledby="authTitle">
+          <div class="sidebar-kicker">Access</div>
+          <div class="section-heading">
+            <div>
+              <h2 id="authTitle">Account</h2>
+              <p class="muted">Sign in to reserve tickets</p>
+            </div>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Authentication mode">
+            <button class="tab active" data-auth-mode="login" type="button">Login</button>
+            <button class="tab" data-auth-mode="register" type="button">Register</button>
+          </div>
+
+          <form id="authForm" class="form">
+            <label id="nameField" class="hidden">
+              Name
+              <input id="nameInput" autocomplete="name" />
+            </label>
+            <label>
+              Email
+              <input id="emailInput" autocomplete="email" type="email" required />
+            </label>
+            <label>
+              Password
+              <input id="passwordInput" autocomplete="current-password" type="password" required minlength="6" />
+            </label>
+            <button class="primary" type="submit">Continue</button>
+          </form>
+        </section>
+
+        <section id="bookingsPanel" class="panel hidden" aria-labelledby="bookingsTitle">
+          <div class="sidebar-kicker">Tickets</div>
+          <div class="section-heading">
+            <div>
+              <h2 id="bookingsTitle">My bookings</h2>
+              <p class="muted">Current reservations</p>
+            </div>
+            <button id="refreshBookings" class="icon-button" title="Refresh bookings" type="button" aria-label="Refresh bookings">&#8635;</button>
+          </div>
+          <div id="bookingsList" class="list"></div>
+        </section>
+      </aside>
+
+      <section class="panel events-panel" aria-labelledby="eventsTitle">
+        <div class="section-heading">
+          <div>
+            <h2 id="eventsTitle">Available events</h2>
+            <p id="eventCount" class="muted">Loading events...</p>
+          </div>
+          <button id="refreshEvents" class="icon-button" title="Refresh events" type="button" aria-label="Refresh events">&#8635;</button>
+        </div>
+        <div id="eventsList" class="event-grid"></div>
+      </section>
+
+      <section id="adminPanel" class="panel admin-panel hidden" aria-labelledby="adminTitle">
+        <div class="section-heading">
+          <div>
+            <h2 id="adminTitle">Admin analytics</h2>
+            <p class="muted">Sales, capacity, and booked users</p>
+          </div>
+          <button id="refreshAdmin" class="icon-button" title="Refresh analytics" type="button" aria-label="Refresh analytics">&#8635;</button>
+        </div>
+        <div id="analyticsSummary" class="metric-grid"></div>
+        <div class="analytics-layout">
+          <section class="analytics-block" aria-labelledby="capacityTitle">
+            <div class="section-heading compact">
+              <h3 id="capacityTitle">Capacity</h3>
+              <span id="capacityRate" class="metric-note">0%</span>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+              <span id="capacityBar" style="width: 0%"></span>
+            </div>
+            <div id="capacityDetails" class="split-details"></div>
+          </section>
+          <section class="analytics-block" aria-labelledby="categoryTitle">
+            <div class="section-heading compact">
+              <h3 id="categoryTitle">Categories</h3>
+            </div>
+            <div id="categoryStats" class="category-list"></div>
+          </section>
+        </div>
+        <div class="section-heading subheading">
+          <div>
+            <h3>Booked users by event</h3>
+            <p class="muted">Grouped ticket holders and totals</p>
+          </div>
+        </div>
+        <div id="adminEventsList" class="admin-list"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

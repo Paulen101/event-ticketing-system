@@ -78,9 +78,11 @@ Status: 201 Created
 
 The response should include a `token`. Copy that token into the Postman environment variable named `userToken`.
 
-## 4. Register an Admin User
+## 4. Prepare an Admin User
 
-Request:
+Public registration always creates regular users. To test admin endpoints, create a normal user first, then update that trusted user's `role` to `admin` in MongoDB Atlas or your local MongoDB database.
+
+Register the admin test user:
 
 ```txt
 POST {{baseUrl}}/api/auth/register
@@ -98,8 +100,7 @@ Body:
 {
   "name": "Admin User",
   "email": "admin@example.com",
-  "password": "password123",
-  "role": "admin"
+  "password": "password123"
 }
 ```
 
@@ -109,7 +110,7 @@ Expected result:
 Status: 201 Created
 ```
 
-Copy the response `token` into the Postman environment variable named `adminToken`.
+After changing this user's role to `admin` in the database, log in again and copy the response `token` into the Postman environment variable named `adminToken`.
 
 ## 5. Login if You Already Registered
 
@@ -292,6 +293,12 @@ Request:
 
 ```txt
 GET {{baseUrl}}/api/bookings/validate/{{qrCode}}
+```
+
+Headers:
+
+```txt
+Authorization: Bearer {{adminToken}}
 ```
 
 Expected result:
