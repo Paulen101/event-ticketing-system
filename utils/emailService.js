@@ -1,13 +1,37 @@
 const nodemailer = require('nodemailer');
 
-const hasEmailConfig = () => {
-  return Boolean(
-    process.env.SMTP_HOST &&
-      process.env.SMTP_PORT &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS &&
-      process.env.EMAIL_FROM
-  );
+const getEmailConfig = () => {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const secure =
+    process.env.SMTP_SECURE === undefined
+      ? port === 465
+      : process.env.SMTP_SECURE === 'true';
+
+  return {
+    host: process.env.SMTP_HOST,
+    port,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from,
+    secure
+  };
+};
+
+const getEmailConfigStatus = () => {
+  const config = getEmailConfig();
+  const missing = [];
+
+  if (!config.host) missing.push('SMTP_HOST');
+  if (!config.port || Number.isNaN(config.port)) missing.push('SMTP_PORT');
+  if (!config.user) missing.push('SMTP_USER');
+  if (!config.pass) missing.push('SMTP_PASS');
+  if (!config.from) missing.push('EMAIL_FROM or SMTP_USER');
+
+  return {
+    configured: missing.length === 0,
+    missing
+  };
 };
 
 const escapeHtml = (value) => {
@@ -39,24 +63,30 @@ const getQrAttachment = (booking) => {
 };
 
 const sendBookingConfirmation = async ({ to, booking, event }) => {
-  if (!hasEmailConfig() || !to) {
+  const emailConfig = getEmailConfig();
+  const emailConfigStatus = getEmailConfigStatus();
+
+  if (!emailConfigStatus.configured || !to) {
     return false;
   }
 
   const qrAttachment = getQrAttachment(booking);
 
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: process.env.SMTP_SECURE === 'true',
+    host: emailConfig.host,
+    port: emailConfig.port,
+    secure: emailConfig.secure,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user: emailConfig.user,
+      pass: emailConfig.pass
     }
   });
 
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+    from: emailConfig.from,
     to,
     subject: `Booking confirmed: ${event.title}`,
     text: [
@@ -98,5 +128,6 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
 };
 
 module.exports = {
+  getEmailConfigStatus,
   sendBookingConfirmation
 };

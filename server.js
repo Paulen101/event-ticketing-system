@@ -9,6 +9,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const { notFound } = require('./middleware/notFoundMiddleware');
 const { errorHandler } = require('./middleware/errorMiddleware');
+const { getEmailConfigStatus } = require('./utils/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +38,14 @@ app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+
+  const emailConfigStatus = getEmailConfigStatus();
+
+  if (!emailConfigStatus.configured) {
+    console.warn(
+      `Email confirmations are disabled. Missing SMTP environment variables: ${emailConfigStatus.missing.join(', ')}`
+    );
+  }
 });
 
 server.on('error', (error) => {

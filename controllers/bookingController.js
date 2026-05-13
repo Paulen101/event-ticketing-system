@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const QRCode = require('qrcode');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
-const { sendBookingConfirmation } = require('../utils/emailService');
+const { getEmailConfigStatus, sendBookingConfirmation } = require('../utils/emailService');
 
 const getMyBookings = async (req, res, next) => {
   try {
@@ -93,23 +93,28 @@ const createBooking = async (req, res, next) => {
     }
 
     const booking = await Booking.findById(createdBooking._id).populate('event');
-    let emailSent = false;
-
-    try {
-      emailSent = await sendBookingConfirmation({
-        to: req.user.email,
-        booking,
-        event
-      });
-    } catch (emailError) {
-      console.error(`Booking confirmation email failed: ${emailError.message}`);
-    }
+    const emailQueued = getEmailConfigStatus().configured && Boolean(req.user.email);
 
     res.status(201).json({
       booking,
       qrImage,
-      emailSent
+      emailSent: false,
+      emailQueued
     });
+
+    if (emailQueued) {
+      setImmediate(async () => {
+        try {
+          await sendBookingConfirmation({
+            to: req.user.email,
+            booking,
+            event
+          });
+        } catch (emailError) {
+          console.error(`Booking confirmation email failed: ${emailError.message}`);
+        }
+      });
+    }
   } catch (error) {
     next(error);
   }

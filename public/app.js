@@ -344,7 +344,13 @@ elements.eventsList.addEventListener('submit', async (event) => {
         quantity
       })
     });
-    showToast(result.emailSent ? 'Booking created and confirmation email sent.' : 'Booking created. Email is not configured.');
+    showToast(
+      result.emailSent
+        ? 'Booking created and confirmation email sent.'
+        : result.emailQueued
+          ? 'Booking created. Confirmation email is being sent.'
+          : 'Booking created, but email is not configured. Check SMTP settings.'
+    );
     await refresh();
   } catch (error) {
     showToast(error.message);
