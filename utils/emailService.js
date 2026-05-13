@@ -24,10 +24,26 @@ const formatEventDate = (event) => {
   return event.time ? `${date} at ${event.time}` : date;
 };
 
+const getQrAttachment = (booking) => {
+  const match = String(booking.qrImage || '').match(/^data:image\/png;base64,(.+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    filename: 'ticket-qr.png',
+    content: Buffer.from(match[1], 'base64'),
+    cid: 'booking-qr'
+  };
+};
+
 const sendBookingConfirmation = async ({ to, booking, event }) => {
   if (!hasEmailConfig() || !to) {
     return false;
   }
+
+  const qrAttachment = getQrAttachment(booking);
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -51,9 +67,10 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
       `Quantity: ${booking.quantity}`,
       `Booking ID: ${booking._id}`,
       `QR validation code: ${booking.qrCode}`,
+      qrAttachment ? 'The QR code is included in the HTML version of this email.' : '',
       '',
       'Please keep this email for check-in.'
-    ].join('\n'),
+    ].filter(Boolean).join('\n'),
     html: `
       <h1>Booking confirmed</h1>
       <p>Your tickets are ready for <strong>${escapeHtml(event.title)}</strong>.</p>
@@ -64,8 +81,17 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
         <li><strong>Booking ID:</strong> ${booking._id}</li>
         <li><strong>QR validation code:</strong> ${escapeHtml(booking.qrCode)}</li>
       </ul>
+      ${
+        qrAttachment
+          ? `
+      <p><strong>Scan this QR code at check-in:</strong></p>
+      <p><img src="cid:booking-qr" alt="Booking QR code" width="180" height="180" style="display:block;border:1px solid #d1d5db;border-radius:8px;padding:8px;" /></p>
+      `
+          : ''
+      }
       <p>Please keep this email for check-in.</p>
-    `
+    `,
+    attachments: qrAttachment ? [qrAttachment] : []
   });
 
   return true;

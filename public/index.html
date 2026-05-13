@@ -19,31 +19,50 @@
     </header>
 
     <main class="layout">
-      <section id="authPanel" class="panel auth-panel" aria-labelledby="authTitle">
-        <div class="section-heading">
-          <h2 id="authTitle">Account</h2>
+      <aside class="sidebar" aria-label="Account and bookings">
+        <section id="authPanel" class="panel auth-panel" aria-labelledby="authTitle">
+          <div class="sidebar-kicker">Access</div>
+          <div class="section-heading">
+            <div>
+              <h2 id="authTitle">Account</h2>
+              <p class="muted">Sign in to reserve tickets</p>
+            </div>
+          </div>
+
           <div class="tabs" role="tablist" aria-label="Authentication mode">
             <button class="tab active" data-auth-mode="login" type="button">Login</button>
             <button class="tab" data-auth-mode="register" type="button">Register</button>
           </div>
-        </div>
 
-        <form id="authForm" class="form">
-          <label id="nameField" class="hidden">
-            Name
-            <input id="nameInput" autocomplete="name" />
-          </label>
-          <label>
-            Email
-            <input id="emailInput" autocomplete="email" type="email" required />
-          </label>
-          <label>
-            Password
-            <input id="passwordInput" autocomplete="current-password" type="password" required minlength="6" />
-          </label>
-          <button class="primary" type="submit">Continue</button>
-        </form>
-      </section>
+          <form id="authForm" class="form">
+            <label id="nameField" class="hidden">
+              Name
+              <input id="nameInput" autocomplete="name" />
+            </label>
+            <label>
+              Email
+              <input id="emailInput" autocomplete="email" type="email" required />
+            </label>
+            <label>
+              Password
+              <input id="passwordInput" autocomplete="current-password" type="password" required minlength="6" />
+            </label>
+            <button class="primary" type="submit">Continue</button>
+          </form>
+        </section>
+
+        <section id="bookingsPanel" class="panel hidden" aria-labelledby="bookingsTitle">
+          <div class="sidebar-kicker">Tickets</div>
+          <div class="section-heading">
+            <div>
+              <h2 id="bookingsTitle">My bookings</h2>
+              <p class="muted">Current reservations</p>
+            </div>
+            <button id="refreshBookings" class="icon-button" title="Refresh bookings" type="button" aria-label="Refresh bookings">&#8635;</button>
+          </div>
+          <div id="bookingsList" class="list"></div>
+        </section>
+      </aside>
 
       <section class="panel events-panel" aria-labelledby="eventsTitle">
         <div class="section-heading">
@@ -54,14 +73,6 @@
           <button id="refreshEvents" class="icon-button" title="Refresh events" type="button" aria-label="Refresh events">&#8635;</button>
         </div>
         <div id="eventsList" class="event-grid"></div>
-      </section>
-
-      <section id="bookingsPanel" class="panel hidden" aria-labelledby="bookingsTitle">
-        <div class="section-heading">
-          <h2 id="bookingsTitle">My bookings</h2>
-          <button id="refreshBookings" class="icon-button" title="Refresh bookings" type="button" aria-label="Refresh bookings">&#8635;</button>
-        </div>
-        <div id="bookingsList" class="list"></div>
       </section>
 
       <section id="adminPanel" class="panel admin-panel hidden" aria-labelledby="adminTitle">
