@@ -44,7 +44,9 @@ const getQrAttachment = (booking) => {
   return {
     content: match[1],
     filename: 'ticket-qr.png',
-    contentId: 'booking-qr'
+    content_id: 'booking-qr',
+    content_type: 'image/png',
+    content_disposition: 'inline'
   };
 };
 
