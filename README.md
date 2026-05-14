@@ -28,12 +28,8 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
 NODE_ENV=development
 
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-SMTP_SECURE=false
-EMAIL_FROM=
+RESEND_API_KEY=
+EMAIL_FROM=Ticket Management <onboarding@resend.dev>
 ```
 
 ## Run
@@ -80,7 +76,7 @@ Filters:
 | POST | `/api/bookings` | Authenticated | Book tickets |
 | GET | `/api/bookings/validate/:qr` | Admin | Validate a booking QR code |
 
-Booking creation returns the booking, a `qrImage` data URL, `emailSent`, and `emailQueued`. Email is sent after the booking response so slow SMTP does not block ticket creation.
+Booking creation returns the booking, a `qrImage` data URL, `emailSent`, and `emailQueued`. Email is sent through Resend after the booking response so email delivery does not block ticket creation.
 
 ### Admin
 
@@ -89,26 +85,20 @@ Booking creation returns the booking, a `qrImage` data URL, `emailSent`, and `em
 | GET | `/api/admin/dashboard` | Admin | Get admin dashboard summary, recent activity, and low-seat events |
 | GET | `/api/admin/dashboard/events` | Admin | Get all events with bookings and users who booked each event |
 | GET | `/api/admin/analytics` | Admin | Get booking, seat, revenue, and category analytics |
-| GET | `/api/admin/email-status` | Admin | Verify deployed SMTP configuration without exposing secrets |
+| GET | `/api/admin/email-status` | Admin | Verify deployed Resend configuration without exposing secrets |
 
 ## Optional Email Confirmation
 
-Booking creation sends a confirmation email through Nodemailer when SMTP is configured. If SMTP is not configured, booking still succeeds and the API returns `emailSent: false`.
+Booking creation sends a confirmation email through Resend when email is configured. If Resend is not configured, booking still succeeds and the API returns `emailSent: false`.
 
 Required deployment variables for email:
 
 ```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_16_character_google_app_password_without_spaces
-SMTP_SECURE=false
-EMAIL_FROM=your_email@gmail.com
+RESEND_API_KEY=your_resend_api_key
+EMAIL_FROM=Ticket Management <onboarding@resend.dev>
 ```
 
-`EMAIL_FROM` can be omitted when it is the same as `SMTP_USER`. Use `SMTP_SECURE=true` for port `465`; for port `587`, keep `SMTP_SECURE=false`.
-
-If deployed email logs show `connect ENETUNREACH` with an IPv6 address, the host cannot route IPv6 SMTP traffic. The server sets Node DNS resolution to prefer IPv4, and the mailer resolves `SMTP_HOST` to an IPv4 address before connecting.
+For production, verify a sending domain in Resend and use an address from that domain for `EMAIL_FROM`.
 
 ## Auth Header
 

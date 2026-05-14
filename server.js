@@ -1,6 +1,5 @@
 require('dotenv').config();
 
-const dns = require('dns');
 const express = require('express');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -14,8 +13,6 @@ const { getEmailConfigStatus } = require('./utils/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-dns.setDefaultResultOrder('ipv4first');
 
 connectDB();
 
@@ -46,7 +43,7 @@ const server = app.listen(PORT, () => {
 
   if (!emailConfigStatus.configured) {
     console.warn(
-      `Email confirmations are disabled. Missing SMTP environment variables: ${emailConfigStatus.missing.join(', ')}`
+      `Email confirmations are disabled. Missing email environment variables: ${emailConfigStatus.missing.join(', ')}`
     );
   }
 });

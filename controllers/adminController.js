@@ -246,11 +246,9 @@ const getEmailStatus = async (req, res, next) => {
     res.json({
       configured: configStatus.configured,
       missing: configStatus.missing,
-      smtpVerified: connectionStatus.ok,
+      resendVerified: connectionStatus.ok,
       error: connectionStatus.error,
-      code: connectionStatus.code,
-      command: connectionStatus.command,
-      responseCode: connectionStatus.responseCode
+      status: connectionStatus.status
     });
   } catch (error) {
     next(error);

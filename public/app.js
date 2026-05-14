@@ -349,7 +349,7 @@ elements.eventsList.addEventListener('submit', async (event) => {
         ? 'Booking created and confirmation email sent.'
         : result.emailQueued
           ? 'Booking created. Confirmation email is being sent.'
-          : 'Booking created, but email is not configured. Check SMTP settings.'
+          : 'Booking created, but email is not configured. Check Resend settings.'
     );
     await refresh();
   } catch (error) {

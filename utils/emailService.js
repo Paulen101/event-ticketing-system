@@ -1,23 +1,9 @@
-const dns = require('dns');
-const nodemailer = require('nodemailer');
-
-const dnsPromises = dns.promises;
+const RESEND_EMAILS_URL = 'https://api.resend.com/emails';
 
 const getEmailConfig = () => {
-  const port = Number(process.env.SMTP_PORT || 587);
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
-  const secure =
-    process.env.SMTP_SECURE === undefined
-      ? port === 465
-      : process.env.SMTP_SECURE === 'true';
-
   return {
-    host: process.env.SMTP_HOST,
-    port,
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-    from,
-    secure
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM
   };
 };
 
@@ -25,11 +11,8 @@ const getEmailConfigStatus = () => {
   const config = getEmailConfig();
   const missing = [];
 
-  if (!config.host) missing.push('SMTP_HOST');
-  if (!config.port || Number.isNaN(config.port)) missing.push('SMTP_PORT');
-  if (!config.user) missing.push('SMTP_USER');
-  if (!config.pass) missing.push('SMTP_PASS');
-  if (!config.from) missing.push('EMAIL_FROM or SMTP_USER');
+  if (!config.apiKey) missing.push('RESEND_API_KEY');
+  if (!config.from) missing.push('EMAIL_FROM');
 
   return {
     configured: missing.length === 0,
@@ -59,57 +42,24 @@ const getQrAttachment = (booking) => {
   }
 
   return {
+    content: match[1],
     filename: 'ticket-qr.png',
-    content: Buffer.from(match[1], 'base64'),
-    cid: 'booking-qr'
+    contentId: 'booking-qr'
   };
 };
 
-const createEmailTransporter = async () => {
-  const emailConfig = getEmailConfig();
-  let smtpHost = emailConfig.host;
-
-  try {
-    const addresses = await dnsPromises.resolve4(emailConfig.host);
-
-    if (addresses.length > 0) {
-      smtpHost = addresses[0];
-    }
-  } catch (error) {
-    console.warn(`Could not resolve IPv4 SMTP host ${emailConfig.host}: ${error.message}`);
-  }
-
-  return nodemailer.createTransport({
-    host: smtpHost,
-    port: emailConfig.port,
-    secure: emailConfig.secure,
-    servername: emailConfig.host,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    tls: {
-      servername: emailConfig.host
-    },
-    auth: {
-      user: emailConfig.user,
-      pass: emailConfig.pass
-    }
-  });
-};
-
-const sendBookingConfirmation = async ({ to, booking, event }) => {
-  const emailConfigStatus = getEmailConfigStatus();
-
-  if (!emailConfigStatus.configured || !to) {
-    return false;
-  }
-
+const createBookingEmailPayload = ({ to, booking, event }) => {
   const qrAttachment = getQrAttachment(booking);
-  const transporter = await createEmailTransporter();
+  const qrImageHtml = qrAttachment
+    ? `
+      <p><strong>Scan this QR code at check-in:</strong></p>
+      <p><img src="cid:booking-qr" alt="Booking QR code" width="180" height="180" style="display:block;border:1px solid #d1d5db;border-radius:8px;padding:8px;" /></p>
+      `
+    : '';
 
-  await transporter.sendMail({
+  return {
     from: getEmailConfig().from,
-    to,
+    to: [to],
     subject: `Booking confirmed: ${event.title}`,
     text: [
       'Your booking is confirmed.',
@@ -119,10 +69,9 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
       `Quantity: ${booking.quantity}`,
       `Booking ID: ${booking._id}`,
       `QR validation code: ${booking.qrCode}`,
-      qrAttachment ? 'The QR code is included in the HTML version of this email.' : '',
       '',
       'Please keep this email for check-in.'
-    ].filter(Boolean).join('\n'),
+    ].join('\n'),
     html: `
       <h1>Booking confirmed</h1>
       <p>Your tickets are ready for <strong>${escapeHtml(event.title)}</strong>.</p>
@@ -133,18 +82,58 @@ const sendBookingConfirmation = async ({ to, booking, event }) => {
         <li><strong>Booking ID:</strong> ${booking._id}</li>
         <li><strong>QR validation code:</strong> ${escapeHtml(booking.qrCode)}</li>
       </ul>
-      ${
-        qrAttachment
-          ? `
-      <p><strong>Scan this QR code at check-in:</strong></p>
-      <p><img src="cid:booking-qr" alt="Booking QR code" width="180" height="180" style="display:block;border:1px solid #d1d5db;border-radius:8px;padding:8px;" /></p>
-      `
-          : ''
-      }
+      ${qrImageHtml}
       <p>Please keep this email for check-in.</p>
     `,
     attachments: qrAttachment ? [qrAttachment] : []
+  };
+};
+
+const parseResendResponse = async (response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { message: text };
+  }
+};
+
+const sendResendEmail = async (payload) => {
+  const config = getEmailConfig();
+  const response = await fetch(RESEND_EMAILS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
   });
+  const body = await parseResendResponse(response);
+
+  if (!response.ok) {
+    const message = body.message || body.error || `Resend API returned ${response.status}`;
+    const error = new Error(message);
+    error.status = response.status;
+    error.response = body;
+    throw error;
+  }
+
+  return body;
+};
+
+const sendBookingConfirmation = async ({ to, booking, event }) => {
+  const emailConfigStatus = getEmailConfigStatus();
+
+  if (!emailConfigStatus.configured || !to) {
+    return false;
+  }
+
+  await sendResendEmail(createBookingEmailPayload({ to, booking, event }));
 
   return true;
 };
@@ -156,27 +145,29 @@ const verifyEmailConnection = async () => {
     return {
       ok: false,
       missing: emailConfigStatus.missing,
-      error: 'SMTP is not fully configured'
+      error: 'Resend is not fully configured'
     };
   }
 
-  const transporter = await createEmailTransporter();
-
   try {
-    await transporter.verify();
+    const response = await fetch('https://api.resend.com/domains', {
+      headers: {
+        Authorization: `Bearer ${getEmailConfig().apiKey}`
+      }
+    });
+    const body = await parseResendResponse(response);
 
     return {
-      ok: true,
-      missing: []
+      ok: response.ok,
+      missing: [],
+      error: response.ok ? undefined : body.message || body.error || `Resend API returned ${response.status}`,
+      status: response.status
     };
   } catch (error) {
     return {
       ok: false,
       missing: [],
-      error: error.message,
-      code: error.code,
-      command: error.command,
-      responseCode: error.responseCode
+      error: error.message
     };
   }
 };
